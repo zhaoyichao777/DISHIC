@@ -1,29 +1,17 @@
-# library(optparse)
-# option_list <- list(
-#     make_option(c("--file_path"), type = "character", help = "Path of data files"),
-#     make_option(c("--feature_path"), type = "character", help = "Path of scHiCNorm feature folder"),
-#     make_option(c("--code_path"), type = "character", help = "Path of the scDI code"),
-#     make_option(c("--chr"), type = "character", help = "chromosome"),
-#     make_option(c("--cores"), type = "integer", help = "core numbers"),
-#     make_option(c("--binsize"), type = "integer", help = "resulotion bin size"),
-#     make_option(c("--limitsize"), type = "integer", help = "limit genomic distance")
-# )
-
-# file_path="/home/zhaoy/my-scHiCDiff/code/pipeline/DISHIC-git/data"
-# file_name1="chr19-fold"
-# file_name2="chr19-ori"
-# code_path="/home/zhaoy/my-scHiCDiff/code/pipeline/DISHIC-git"
-# feature_path="/home/zhaoy/my-scHiCDiff/feature"
-# chr=19
-# cell_feature=NULL
-# cores=30
-# bin_size=200000
-# limit_size=10000000
-# group_size <- 25000
+file_path <- "/home/zhaoy/my-scHiCDiff/code/pipeline/DISHIC-git/data"
+file_name1 <- "chr19-fold"
+file_name2 <- "chr19-ori"
+code_path <- "/home/zhaoy/my-scHiCDiff/code/pipeline/DISHIC-git"
+feature_path <- "/home/zhaoy/my-scHiCDiff/feature"
+chr <- 19
+cell_feature <- NULL
+cores <- 40
+bin_size <- 200000
+limit_size <- 10000000
+group_size <- 25000
 
 DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, limit_size, group_size) {
     options(scipen=999)
-    a=1
     setwd(code_path)
     source("data_process.R", local = TRUE)
     source("model_class.R", local = TRUE)
@@ -64,8 +52,8 @@ DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, lim
         }
     }
     ########################## data prepare #################################
-    file_path1=file.path(file_path,file_name1)
-    file_path2=file.path(file_path,file_name2)
+    file_path1 <- file.path(file_path,file_name1)
+    file_path2 <- file.path(file_path,file_name2)
 
     ######### combile all cells to one dataframe ########
     ori_file <- combine_cell(file_path1)
@@ -78,9 +66,6 @@ DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, lim
     file[is.na(file)] <- 0
     file <- file[rowSums(file) != 0, ]
     ###
-    lib_size <- colSums(file)
-    lib_size <- (lib_size - mean(c(lib_size))) / sd(c(lib_size))
-    cell_feature=lib_size
     ###
     if(!is.null(cell_feature) & NROW(cell_feature) != NCOL(file)){
         print("Cell feature size wrong!")
@@ -145,3 +130,5 @@ DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, lim
     final_result <- do.call(rbind, results_list)
     write.table(final_result, paste0(file_path, "/result2/chr", chr, "/chr",chr,".txt"))
 }
+
+DISHIC(file_path, feature_path, code_path, chr, cores, bin_size, limit_size, group_size)

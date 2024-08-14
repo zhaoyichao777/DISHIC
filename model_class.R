@@ -1,6 +1,3 @@
-# 文件名: model_class.R
-
-# 定义构造函数
 create_model <- function(A, B, alpha_mu, alpha_pi, beta_mu, beta_pi, zeta, m, n,epsilon,
                       epsilon_alpha_mu, epsilon_beta_mu, epsilon_alpha_pi,
                       epsilon_beta_pi,epsilon_zeta) {
@@ -52,25 +49,25 @@ create_model <- function(A, B, alpha_mu, alpha_pi, beta_mu, beta_pi, zeta, m, n,
         epsilon_alpha_mu <- epsilon / n
         e <- rep(epsilon_alpha_mu, NCOL(A))
         e[1] <- 0
-        epsilon_alpha_mu=e
+        epsilon_alpha_mu <- e
     }
     if (missing(epsilon_beta_mu)) {
         epsilon_beta_mu <- epsilon / m
         e <- rep(epsilon_beta_mu, NCOL(B))
         e[1] <- 0
-        epsilon_beta_mu=e
+        epsilon_beta_mu <- e
     }
     if (missing(epsilon_alpha_pi)) {
         epsilon_alpha_pi <- epsilon / n
         e <- rep(epsilon_alpha_pi, NCOL(A))
         e[1] <- 1e-3
-        epsilon_alpha_pi=e
+        epsilon_alpha_pi <- e
     }
     if (missing(epsilon_beta_pi)) {
         epsilon_beta_pi <- epsilon / m
         e <- rep(epsilon_beta_pi, NCOL(B))
         e[1] <- 1e-3
-        epsilon_beta_pi=e
+        epsilon_beta_pi <- e
     }
     if (missing(epsilon_zeta)) {
         epsilon_zeta <- epsilon
@@ -102,7 +99,7 @@ create_model <- function(A, B, alpha_mu, alpha_pi, beta_mu, beta_pi, zeta, m, n,
     return(obj)
 }
 
-# 定义一个示例方法：打印 model 对象的信息
+# print model
 print.model <- function(model) {
     cat("Model Details:\n")
     cat("A:", model$A, "\n")
@@ -114,38 +111,3 @@ print.model <- function(model) {
     cat("theta:", model$theta, "\n")
     cat("m:", model$m, "\n")
 }
-
-# getA <- function(model) {
-#     return(model$A)
-# }
-# getB <- function(model) {
-#     return(model$B)
-# }
-
-# getAlphaMu <- function(model) {
-#     return(model$alpha_mu)
-# }
-
-# getAlphaPi <- function(model) {
-#     return(model$alpha_pi)
-# }
-
-# getBetaMu <- function(model) {
-#     return(model$beta_mu)
-# }
-
-# getBetaPi <- function(model) {
-#     return(model$beta_pi)
-# }
-
-# getZeta <- function(model) {
-#     return(model$zeta)
-# }
-
-# getM <- function(model) {
-#     return(model$m)
-# }
-
-# getN <- function(model) {
-#     return(model$n)
-# }
