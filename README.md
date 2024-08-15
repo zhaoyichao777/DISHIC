@@ -1,27 +1,18 @@
-# DISHIC
-# library(optparse)
-# option_list <- list(
-#     make_option(c("--file_path"), type = "character", help = "Path of data files"),
-#     make_option(c("--feature_path"), type = "character", help = "Path of scHiCNorm feature folder"),
-#     make_option(c("--code_path"), type = "character", help = "Path of the scDI code"),
-#     make_option(c("--chr"), type = "character", help = "chromosome"),
-#     make_option(c("--cores"), type = "integer", help = "core numbers"),
-#     make_option(c("--binsize"), type = "integer", help = "resulotion bin size"),
-#     make_option(c("--limitsize"), type = "integer", help = "limit genomic distance")
-# )
+
+An example to run DISHIC on GSE80006 chromosome 19.
 
 ```
-file_path <- "/home/zhaoy/my-scHiCDiff/code/pipeline/DISHIC-git/data"
-file_name1 <- "chr19-fold"
-file_name2 <- "chr19-ori"
-code_path <- "/home/zhaoy/my-scHiCDiff/code/pipeline/DISHIC-git"
-feature_path <- "/home/zhaoy/my-scHiCDiff/feature"
-chr <- 19
-cell_feature <- NULL
-cores <- 40
-bin_size <- 200000
-limit_size <- 10000000
-group_size <- 25000
-```
+file_path <- "/zhaoy/DISHIC/data" # data folder root path
+file_name1 <- "chr19-fold" # group1 data subfolder name
+file_name2 <- "chr19-ori" # group2 data subfolder name
+code_path <- "/zhaoy/DISHIC" #DISHIC code folder path
+feature_path <- "/zhaoy/DISHIC/feature" #schiCNorm feature folder path
+chr <- 19  # chromosomes to be analyzed
+cell_feature <- NULL # cell-level covariate matrix, nrows is the cell number and ncols is feature number
+cores <- 40 # number of nodes for parallel computing
+bin_size <- 200000 # data binned resolution
+limit_size <- 10000000 # max genomic distance between analyzed bin-pairs
+group_size <- 25000 #if the file is too large, group the files into several groups with group_size bin-pairs and calculate them sequentially.
 
-DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, limit_size, group_size)
+DISHIC(file_path, feature_path, code_path, chr, cores, bin_size, limit_size, group_size)
+```
