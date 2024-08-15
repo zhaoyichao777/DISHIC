@@ -1,6 +1,4 @@
-create_model <- function(A, B, alpha_mu, alpha_pi, beta_mu, beta_pi, zeta, m, n,epsilon,
-                      epsilon_alpha_mu, epsilon_beta_mu, epsilon_alpha_pi,
-                      epsilon_beta_pi,epsilon_zeta) {
+create_model <- function(A, B, alpha_mu, alpha_pi, beta_mu, beta_pi, zeta, m, n, epsilon, epsilon_alpha_mu, epsilon_beta_mu, epsilon_alpha_pi, epsilon_beta_pi, epsilon_zeta) {
     if (missing(m)) {
         if (!missing(A)) {
             m <- NROW(A)
@@ -21,7 +19,7 @@ create_model <- function(A, B, alpha_mu, alpha_pi, beta_mu, beta_pi, zeta, m, n,
     }
 
     if (missing(A)) {
-        A <- matrix(1, nrow = m, ncol = 1) # intercept
+        A <- matrix(1, nrow = m, ncol = 1)  # intercept
     }
     if (missing(B)) {
         B <- matrix(1, nrow = n, ncol = 1)
@@ -46,55 +44,38 @@ create_model <- function(A, B, alpha_mu, alpha_pi, beta_mu, beta_pi, zeta, m, n,
         epsilon <- m
     }
     if (missing(epsilon_alpha_mu)) {
-        epsilon_alpha_mu <- epsilon / n
+        epsilon_alpha_mu <- epsilon/n
         e <- rep(epsilon_alpha_mu, NCOL(A))
         e[1] <- 0
         epsilon_alpha_mu <- e
     }
     if (missing(epsilon_beta_mu)) {
-        epsilon_beta_mu <- epsilon / m
+        epsilon_beta_mu <- epsilon/m
         e <- rep(epsilon_beta_mu, NCOL(B))
         e[1] <- 0
         epsilon_beta_mu <- e
     }
     if (missing(epsilon_alpha_pi)) {
-        epsilon_alpha_pi <- epsilon / n
+        epsilon_alpha_pi <- epsilon/n
         e <- rep(epsilon_alpha_pi, NCOL(A))
-        e[1] <- 1e-3
+        e[1] <- 0.001
         epsilon_alpha_pi <- e
     }
     if (missing(epsilon_beta_pi)) {
-        epsilon_beta_pi <- epsilon / m
+        epsilon_beta_pi <- epsilon/m
         e <- rep(epsilon_beta_pi, NCOL(B))
-        e[1] <- 1e-3
+        e[1] <- 0.001
         epsilon_beta_pi <- e
     }
     if (missing(epsilon_zeta)) {
         epsilon_zeta <- epsilon
     }
 
-    # if (missing(O_mu)) {
-    #     O_mu <- matrix(0, nrow = n, ncol = J)
-    # }
+    # if (missing(O_mu)) { O_mu <- matrix(0, nrow = n, ncol = J) }
 
 
-    obj <- list(
-        A = A,
-        B = B,
-        alpha_mu = alpha_mu,
-        alpha_pi = alpha_pi,
-        beta_mu = beta_mu,
-        beta_pi = beta_pi,
-        zeta = zeta,
-        m = m,
-        n = n,
-        epsilon=epsilon,
-        epsilon_alpha_mu=epsilon_alpha_mu,
-        epsilon_beta_mu=epsilon_beta_mu,
-        epsilon_alpha_pi=epsilon_alpha_pi,
-        epsilon_beta_pi=epsilon_beta_pi,
-        epsilon_zeta=epsilon_zeta
-    )
+    obj <- list(A = A, B = B, alpha_mu = alpha_mu, alpha_pi = alpha_pi, beta_mu = beta_mu, beta_pi = beta_pi, zeta = zeta, m = m, n = n, epsilon = epsilon, epsilon_alpha_mu = epsilon_alpha_mu,
+        epsilon_beta_mu = epsilon_beta_mu, epsilon_alpha_pi = epsilon_alpha_pi, epsilon_beta_pi = epsilon_beta_pi, epsilon_zeta = epsilon_zeta)
     class(obj) <- "model"
     return(obj)
 }

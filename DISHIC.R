@@ -1,23 +1,11 @@
-file_path <- "/home/zhaoy/my-scHiCDiff/code/pipeline/DISHIC-git/data"
-file_name1 <- "chr19-fold"
-file_name2 <- "chr19-ori"
-code_path <- "/home/zhaoy/my-scHiCDiff/code/pipeline/DISHIC-git"
-feature_path <- "/home/zhaoy/my-scHiCDiff/feature"
-chr <- 19
-cell_feature <- NULL
-cores <- 40
-bin_size <- 200000
-limit_size <- 10000000
-group_size <- 25000
-
 DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, limit_size, group_size) {
-    options(scipen=999)
+    options(scipen = 999)
     setwd(code_path)
     source("data_process.R", local = TRUE)
     source("model_class.R", local = TRUE)
-    source("solveRidgeRegression.R", local = TRUE)
-    source("zinbInitialize.R", local = TRUE)
-    source("zinbOptimize.R", local = TRUE)
+    source("solve_regression.R", local = TRUE)
+    source("zinb_initialize.R", local = TRUE)
+    source("zinb_optimize.R", local = TRUE)
 
     library(BiocParallel)
     BPPARAM <- MulticoreParam(workers = cores, progressbar = FALSE)
@@ -39,7 +27,7 @@ DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, lim
             r[i] <- log1p(r[i])
         }
         if (any(i <- !i1 & (i2 <- x <= c2))) {
-            r[i] <- x[i] + 1 / r[i]
+            r[i] <- x[i] + 1/r[i]
         }
         if (any(i3 <- !i2)) {
             r[i3] <- x[i3]
@@ -52,8 +40,8 @@ DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, lim
         }
     }
     ########################## data prepare #################################
-    file_path1 <- file.path(file_path,file_name1)
-    file_path2 <- file.path(file_path,file_name2)
+    file_path1 <- file.path(file_path, file_name1)
+    file_path2 <- file.path(file_path, file_name2)
 
     ######### combile all cells to one dataframe ########
     ori_file <- combine_cell(file_path1)
@@ -66,21 +54,20 @@ DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, lim
     file[is.na(file)] <- 0
     file <- file[rowSums(file) != 0, ]
     ###
-    ###
-    if(!is.null(cell_feature) & NROW(cell_feature) != NCOL(file)){
+    if (!is.null(cell_feature) & NROW(cell_feature) != NCOL(file)) {
         print("Cell feature size wrong!")
         stop("Stopping function due to incorrect cell feature size.")
     }
 
     # calculate number of groups
     n_rows <- nrow(file)
-    n_groups <- ceiling(n_rows / group_size)
+    n_groups <- ceiling(n_rows/group_size)
     groups <- rep(1:n_groups, each = group_size)[1:n_rows]
     file_list <- split(file, groups)
     number_of_groups <- length(file_list)
     print(paste0("number_of_groups:", number_of_groups))
 
-    dir.create(paste0(file_path, "/result2/chr", chr), recursive = TRUE)
+    dir.create(paste0(file_path, "/result/chr", chr), recursive = TRUE)
 
     results_list <- mapply(function(group_index, file_part) {
         feature_scHiCNorm <- get_scHiCNorm_feature(address = file.path(feature_path, paste0(chr, ".bin_features_", bin_size)))
@@ -89,14 +76,14 @@ DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, lim
         feature_scHiCNorm <- feature_scHiCNorm[common_rows, ]
 
         Y <- as.matrix(file_part)
-        null_model <- prepare_data(file = Y, bin_pair_feature=feature_scHiCNorm,cell_feature=cell_feature)
-        group_model <- prepare_data(file = Y, bin_pair_feature = feature_scHiCNorm, cell_feature=cell_feature,group = group )
+        null_model <- prepare_data(file = Y, bin_pair_feature = feature_scHiCNorm, cell_feature = cell_feature)
+        group_model <- prepare_data(file = Y, bin_pair_feature = feature_scHiCNorm, cell_feature = cell_feature, group = group)
 
         # model initialize and optimize
         init_null_model <- zinbInitialize(Y, null_model, BPPARAM = BPPARAM)
-        opt_null_model <- zinbOptimize(init_null_model, Y, maxiter = 15, stop.epsilon = 0.0001)
+        opt_null_model <- zinbOptimize(init_null_model, Y, maxiter = 15, stop.epsilon = 1e-04)
         init_group_model <- zinbInitialize(Y, group_model, BPPARAM = BPPARAM)
-        opt_group_model <- zinbOptimize(init_group_model, Y, maxiter = 15, stop.epsilon = 0.0001)
+        opt_group_model <- zinbOptimize(init_group_model, Y, maxiter = 15, stop.epsilon = 1e-04)
 
         # calculate parameters
         mu_null <- exp(opt_null_model$A %*% opt_null_model$alpha_mu + t(opt_null_model$B %*% opt_null_model$beta_mu))
@@ -112,23 +99,13 @@ DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, lim
         prob_group <- zinb.loglik.single(Y, mu_group, theta_group, logitPi_group)
         lrt_statistic <- -2 * (prob_null - prob_group)
         p_values <- pchisq(lrt_statistic, df = 1, lower.tail = FALSE)
-        results <- data.frame(
-            mean_group1 = rowMeans(Y[, group == 0]),
-            mean_group2 = rowMeans(Y[, group == 1]),
-            mean_mu_null = rowMeans(mu_null),
-            mean_mu_group = rowMeans(mu_group),
-            prob_null,
-            prob_group,
-            lrt_statistic,
-            p_value = p_values
-        )
+        results <- data.frame(mean_group1 = rowMeans(Y[, group == 0]), mean_group2 = rowMeans(Y[, group == 1]), mean_mu_null = rowMeans(mu_null), mean_mu_group = rowMeans(mu_group),
+            prob_null, prob_group, lrt_statistic, p_value = p_values)
         rownames(results) <- rownames(file_part)
         return(results)
     }, seq_along(file_list), file_list, SIMPLIFY = FALSE)
 
 
     final_result <- do.call(rbind, results_list)
-    write.table(final_result, paste0(file_path, "/result2/chr", chr, "/chr",chr,".txt"))
+    write.table(final_result, paste0(file_path, "/result/chr", chr, "/chr", chr, ".txt"))
 }
-
-DISHIC(file_path, feature_path, code_path, chr, cores, bin_size, limit_size, group_size)
