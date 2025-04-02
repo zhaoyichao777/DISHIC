@@ -80,8 +80,8 @@ feature_path <- "./feature"
 # cell-level covariate matrix
 cell_feature <- NULL
 ```
-The `feature_path` folder contains genome-level features. By default, DISHIC uses scHiCNorm features as genome-level features. Features for other species or resolutions not provided can be generated from their [website](http://dna.cs.miami.edu/scHiCNorm/).
-The `cell_feature` is a matrix of cell-level covariates, with the number of cells in the row and the columns as features. By default it is NULL, but users can define it and the method will detect it.
+- The `feature_path` folder contains genome-level features. By default, DISHIC uses scHiCNorm features as genome-level features. Features for other species or resolutions not provided can be generated from their [website](http://dna.cs.miami.edu/scHiCNorm/).
+- The `cell_feature` is a matrix of cell-level covariates, with the number of cells in the row and the columns as features. By default it is NULL, but users can define it and the method will detect it.
 
 ### 4. Other settings
 ```
