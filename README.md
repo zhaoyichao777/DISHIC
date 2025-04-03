@@ -1,5 +1,8 @@
 DISHIC method has been published on DOI:[10.1109/BIBM62325.2024.10821719](https://ieeexplore.ieee.org/document/10821719)
 
+![image](https://github.com/user-attachments/assets/322e8b32-b4ee-41ce-b700-d17d7117a287)
+
+
 Here is an example to run DISHIC on [GSE80006](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE80006) chromosome 19.
 
 ```
