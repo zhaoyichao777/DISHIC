@@ -6,6 +6,7 @@ DISHIC method has been published on DOI:[10.1109/BIBM62325.2024.10821719](https:
 Here is an example to run DISHIC on [GSE80006](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE80006) chromosome 19.
 
 ```
+source("DISHIC.R")
 # data folder root path
 file_path <- "./data"
 # group1 data subfolder name
