@@ -110,3 +110,4 @@ group_size <- 25000
 ```
 DISHIC(file_path, feature_path, code_path, chr, cores, bin_size, limit_size, group_size)
 ```
+<img width="1440" height="960" alt="image" src="https://github.com/user-attachments/assets/89038bc2-33cc-4ec8-9642-586b63538119" />
