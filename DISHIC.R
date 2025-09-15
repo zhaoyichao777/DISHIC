@@ -1,4 +1,4 @@
-DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, limit_size, group_size) {
+DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, limit_size, group_size, gp=False) {
     options(scipen = 999)
     setwd(code_path)
     source("data_process.R", local = TRUE)
@@ -39,6 +39,35 @@ DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, lim
             r
         }
     }
+    
+
+    calculate_kernel_matrix <- function(coords, length_scale = 1e6, signal_var = 1) {
+        if (length(length_scale) == 0 || is.null(length_scale) || is.na(length_scale)) {
+            warning("length_scale is invalid, using default value 1e6")
+            length_scale <- 1e6
+        }
+        if (length_scale <= 0) {
+            warning("length_scale must be positive, using default value 1e6")
+            length_scale <- 1e6
+        }
+        print(paste0("Final length_scale: ", length_scale))
+        if (length(coords) == 0) {
+            stop("Coordinate vector is empty")
+        }
+        if (any(is.na(coords))) {
+            stop("Coordinate vector contains NA values")
+        }
+        
+        m <- length(coords)
+        print(paste0("Creating kernel matrix for ", m, " coordinates"))
+        dist_matrix <- outer(coords, coords, function(x, y) (x - y)^2)
+        K <- signal_var * exp(-dist_matrix / (2 * length_scale^2))
+        K_regularized <- K + diag(1e-6, m)
+        K_inv <- solve(K_regularized)
+        rownames(K_inv) <- names(coords)
+        colnames(K_inv) <- names(coords)
+        return(K_inv)
+    }
     ########################## data prepare #################################
     file_path1 <- file.path(file_path, file_name1)
     file_path2 <- file.path(file_path, file_name2)
@@ -68,6 +97,35 @@ DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, lim
     print(paste0("number_of_groups:", number_of_groups))
 
     dir.create(paste0(file_path, "/result/chr", chr), recursive = TRUE)
+
+
+    if (GP) {
+        extract_bin_coords <- function(rownames_list) {
+            coords_list <- lapply(rownames_list, function(rowname) {
+                parts <- strsplit(rowname, "-")[[1]]
+                if (length(parts) == 2) {
+                    i <- as.numeric(parts[1])
+                    j <- as.numeric(parts[2])
+                    return((i + j) / 2)
+                } else {
+                    return(NA)
+                }
+            })
+            return(unlist(coords_list))
+        }
+        
+        actual_length_scale <- 1e6
+        all_bin_coords <- extract_bin_coords(rownames(file))
+        names(all_bin_coords) <- rownames(file)
+        K_inv_full <- calculate_kernel_matrix(all_bin_coords, length_scale = actual_length_scale)
+
+        group_indices_map <- lapply(1:n_groups, function(group_idx) {
+            which(groups == group_idx)
+        })
+    } else {
+        K_inv_full <- NULL
+        group_indices_map <- NULL
+    }
 
     results_list <- mapply(function(group_index, file_part) {
         feature_scHiCNorm <- get_scHiCNorm_feature(address = file.path(feature_path, paste0(chr, ".bin_features_", bin_size)))
