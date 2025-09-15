@@ -1,7 +1,7 @@
 # -------------------------------------------------------------------------------- This code is based on modifications made to the original zinbwave code.  Original
 # zinbwave code can be found at: https://github.com/biocore/zinbwave Modifications made to adapt to specific data structure and analysis requirements.
 # --------------------------------------------------------------------------------
-zinbOptimize <- function(model, file, maxiter = 25, stop.epsilon = 0.001) {
+zinbOptimize <- function(model, file, maxiter = 15, stop.epsilon = 0.0001,K_inv = NULL, lambda_gp = 0.1) {
     A <- model$A
     B <- model$B
     alpha_mu <- model$alpha_mu
@@ -53,9 +53,24 @@ zinbOptimize <- function(model, file, maxiter = 25, stop.epsilon = 0.001) {
         gc()
         ########## alpha ############
         print("alpha")
-        estimate_alpha <- matrix(unlist(bplapply(seq(n), function(i) {
-            optimright_fun(alpha_mu[, i], alpha_pi[, i], Y[, i], A = A, B = B[i, ], beta_mu, beta_pi, zeta, epsilonAlpha)
-        }, BPPARAM = BPPARAM)), nrow = NROW(alpha_mu) + NROW(alpha_pi))
+        if(K_inv){
+            estimate_alpha <- matrix(unlist(
+             bplapply(seq_len(n), function(i) {
+                optimright_fun_GP(
+                    alpha_mu[, i], alpha_pi[, i], Y[, i], 
+                    A = A, B = B[i, ], beta_mu, beta_pi, 
+                    zeta, epsilonAlpha, 
+                    K_inv = K_inv_global, 
+                    lambda_gp = lambda_gp
+                )
+            }, BPPARAM = BPPARAM)
+
+        }else{
+            estimate_alpha <- matrix(unlist(bplapply(seq(n), function(i) {
+                optimright_fun(alpha_mu[, i], alpha_pi[, i], Y[, i], A = A, B = B[i, ], beta_mu, beta_pi, zeta, epsilonAlpha)
+            }, BPPARAM = BPPARAM)), nrow = NROW(alpha_mu) + NROW(alpha_pi))
+        }
+            
 
         ind <- 1
         alpha_mu <- estimate_alpha[ind:(ind + NROW(alpha_mu) - 1), , drop = FALSE]
@@ -99,9 +114,53 @@ optimright_fun <- function(alpha_mu, alpha_pi, Y, A, B, beta_mu, beta_pi, zeta, 
     lower_bounds <- rep(-10, par_length)
     upper_bounds <- rep(10, par_length)
     optim(fn = zinb.loglik.regression, gr = zinb.loglik.regression.gradient, par = par, Y = Y, feature.mu = A, offset_mu = t(B %*% beta_mu), feature.pi = A, offset_pi = t(B %*%
-        beta_pi), C.theta = zeta, epsilon = epsilonAlpha, control = list(fnscale = -1, trace = 0), method = "L-BFGS-B", lower = lower_bounds, upper = upper_bounds)$par
+        beta_pi), C.theta = zeta, epsilon = epsilonAlpha, control = list(fnscale = -1, trace = 0,factr=1e8), method = "L-BFGS-B", lower = lower_bounds, upper = upper_bounds)$par
 }
 
+optimright_fun_GP <- function(alpha_mu, alpha_pi, Y, A, B, beta_mu, beta_pi, zeta, epsilonAlpha, K_inv = NULL, lambda_gp = 0.1) { 
+    gp_params <- list(K_inv = K_inv, lambda_gp = lambda_gp)
+    
+    par <- c(alpha_mu, alpha_pi)
+    par_length <- length(par)
+    lower_bounds <- rep(-10, par_length)
+    upper_bounds <- rep(10, par_length)
+    print("optimright_fun")
+    optim(
+        fn = function(para) {
+            zinb.loglik.regression.gp(
+                para = para,
+                Y = Y,
+                A.mu = A,
+                C.mu = t(B %*% beta_mu),
+                A.pi = A,
+                C.pi = t(B %*% beta_pi),
+                C.theta = zeta,
+                epsilon = epsilonAlpha,
+                K_inv = K_inv,
+                lambda_gp = lambda_gp
+            )
+        },
+        gr = function(para) {
+            zinb.loglik.regression.gradient.gp(
+                para = para,
+                Y = Y,
+                A.mu = A,
+                C.mu = t(B %*% beta_mu),
+                A.pi = A,
+                C.pi = t(B %*% beta_pi),
+                C.theta = zeta,
+                epsilon = epsilonAlpha,
+                K_inv = K_inv,
+                lambda_gp = lambda_gp
+            )
+        },
+        par = par,
+        control = list(fnscale = -1, trace = 1,factr=1e8),
+        method = "L-BFGS-B",
+        lower = lower_bounds,
+        upper = upper_bounds
+    )$par
+}
 
 optimleft_fun <- function(beta_mu, beta_pi, Y, A, B, alpha_mu, alpha_pi, zeta, n, epsilonBeta) {
     par <- c(beta_mu, beta_pi)
@@ -109,7 +168,7 @@ optimleft_fun <- function(beta_mu, beta_pi, Y, A, B, alpha_mu, alpha_pi, zeta, n
     lower_bounds <- rep(-10, par_length)
     upper_bounds <- rep(10, par_length)
     optim(fn = zinb.loglik.regression, gr = zinb.loglik.regression.gradient, par = par, Y = t(Y), feature.mu = B, offset_mu = t(A %*% alpha_mu), feature.pi = B, offset_pi = t(A %*%
-        alpha_pi), C.theta = matrix(zeta, nrow = n, ncol = 1), epsilon = epsilonBeta, control = list(fnscale = -1, trace = 0), method = "L-BFGS-B", lower = lower_bounds,
+        alpha_pi), C.theta = matrix(zeta, nrow = n, ncol = 1), epsilon = epsilonBeta, control = list(fnscale = -1, trace = 0,factr=1e8), method = "L-BFGS-B", lower = lower_bounds,
         upper = upper_bounds)$par
 }
 
@@ -252,6 +311,140 @@ zinb.loglik.regression.gradient <- function(para, Y, feature.mu = matrix(nrow = 
 }
 
 
+zinb.loglik.regression.gp <- function(para, Y,
+                                     A.mu = matrix(nrow = length(Y), ncol = 0),
+                                     C.mu = matrix(0, nrow = length(Y), ncol = 1),
+                                     A.pi = matrix(nrow = length(Y), ncol = 0),
+                                     C.pi = matrix(0, nrow = length(Y), ncol = 1),
+                                     C.theta = matrix(0, nrow = length(Y), ncol = 1), 
+                                     epsilon = 0,
+                                     K_inv = NULL, lambda_gp = 0.1) {
+    # Parse the model
+    r <- zinb.regression.parseModel(
+        para = para,
+        A.mu = A.mu,
+        C.mu = C.mu,
+        A.pi = A.pi,
+        C.pi = C.pi
+    )
+    print("zinb.loglik.regression.gp")
+    # Call the log likelihood function
+    z <- zinb.loglik(Y, exp(r$logMu), exp(C.theta), r$logitPi)
+
+    # 原有的L2正则化
+    z <- z - sum(epsilon * para^2) / 2
+    print("zinb.loglik.regression.gp-ifnotnullK_inv")
+    # 新增：GP先验正则化（作用于函数值 f = X * alpha）
+    if (!is.null(K_inv) && lambda_gp > 0) {
+        n_alpha <- ifelse(ncol(A.mu) > 0, ncol(A.mu), 0)
+        if (n_alpha > 0) {
+            alpha_mu_vec <- para[1:n_alpha]
+
+            # 计算函数值 f = A.mu %*% alpha_mu_vec
+            f <- A.mu %*% alpha_mu_vec
+            
+            gp_penalty <- 0.5 * lambda_gp * (t(f) %*% K_inv %*% f)
+            z <- z - gp_penalty
+        }
+    }
+    return(z)
+}
+
+zinb.loglik.regression.gradient.gp <- function(para, Y,
+                                              A.mu = matrix(nrow = length(Y), ncol = 0),
+                                              C.mu = matrix(0, nrow = length(Y), ncol = 1),
+                                              A.pi = matrix(nrow = length(Y), ncol = 0),
+                                              C.pi = matrix(0, nrow = length(Y), ncol = 1),
+                                              C.theta = matrix(0, nrow = length(Y), ncol = 1), 
+                                              epsilon = 0,
+                                              K_inv = NULL, lambda_gp = 0.1) {
+    # Parse the model
+    r <- zinb.regression.parseModel(
+        para = para,
+        A.mu = A.mu,
+        C.mu = C.mu,
+        A.pi = A.pi,
+        C.pi = C.pi
+    )
+
+    theta <- exp(C.theta)
+    mu <- exp(r$logMu)
+    n <- length(Y)
+    
+    # Check zeros in the count matrix
+    Y0 <- Y <= 0
+    Y1 <- Y > 0
+    has0 <- !is.na(match(TRUE, Y0))
+    has1 <- !is.na(match(TRUE, Y1))
+
+    # Check what we need to compute,
+    # depending on the variables over which we optimize
+    need.wres.mu <- r$dim.para[1] > 0
+    need.wres.pi <- r$dim.para[2] > 0
+
+    # Compute some useful quantities
+    muz <- 1 / (1 + exp(-r$logitPi))
+    clogdens0 <- dnbinom(0, size = theta[Y0], mu = mu[Y0], log = TRUE)
+    # dens0 <- muz[Y0] + exp(log(1 - muz[Y0]) + clogdens0)
+    # More accurate: log(1-muz) is the following
+    lognorm <- -r$logitPi - log1pexp(-r$logitPi)
+
+    dens0 <- muz[Y0] + exp(lognorm[Y0] + clogdens0)
+
+    # Compute the partial derivatives we need
+    ## w.r.t. mu
+    if (need.wres.mu) {
+        wres_mu <- numeric(length = n)
+        if (has1) {
+            wres_mu[Y1] <- Y[Y1] - mu[Y1] *
+                (Y[Y1] + theta[Y1]) / (mu[Y1] + theta[Y1])
+        }
+        if (has0) {
+            wres_mu[Y0] <- -exp(-log(dens0) + lognorm[Y0] + clogdens0 +
+                C.theta[Y0] - log(mu[Y0] + theta[Y0]) +
+                log(mu[Y0]))
+        }
+    }
+
+    ## w.r.t. pi
+    if (need.wres.pi) {
+        wres_pi <- numeric(length = n)
+        if (has1) {
+            wres_pi[Y1] <- -muz[Y1]
+        }
+        if (has0) {
+            wres_pi[Y0] <- (1 - exp(clogdens0)) * muz[Y0] * (1 - muz[Y0]) / dens0
+        }
+    }
+
+    # Make gradient
+    grad <- numeric(0)
+
+    ## w.r.t. a_mu
+    if (r$dim.para[1] > 0) {
+        istart <- r$start.para[1]
+        iend <- r$start.para[1] + r$dim.para[1] - 1
+        base_grad <- colSums(wres_mu * A.mu) - epsilon[istart:iend] * para[istart:iend]
+
+        if (!is.null(K_inv) && lambda_gp > 0) {
+            alpha_mu_vec <- para[istart:iend]
+            # f = A.mu %*% alpha_mu_vec
+            f <- A.mu %*% alpha_mu_vec
+            # GP gradient：A.muᵀ * K_inv * f
+            gp_grad <- lambda_gp * (t(A.mu) %*% (K_inv %*% f))
+            base_grad <- base_grad - gp_grad
+        }
+        
+        grad <- c(grad, base_grad)
+    }
+    ## w.r.t. a_pi
+    if (r$dim.para[2] > 0) {
+        istart <- r$start.para[2]
+        iend <- r$start.para[2] + r$dim.para[2] - 1
+        grad <- c(grad, colSums(wres_pi * A.pi) - epsilon[istart:iend] * para[istart:iend])
+    }
+    return(grad)
+}
 
 optimizeDispersion <- function(m, mu, logitPi, epsilon, Y) {
     g <- suppressWarnings(optimize(f = zinb.loglik.dispersion, Y = Y, mu = mu, logitPi = logitPi, maximum = TRUE, interval = c(-50, 50)))
