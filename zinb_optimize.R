@@ -155,7 +155,7 @@ optimright_fun_GP <- function(alpha_mu, alpha_pi, Y, A, B, beta_mu, beta_pi, zet
             )
         },
         par = par,
-        control = list(fnscale = -1, trace = 1,factr=1e8),
+        control = list(fnscale = -1, trace = 1),
         method = "L-BFGS-B",
         lower = lower_bounds,
         upper = upper_bounds
