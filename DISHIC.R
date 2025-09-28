@@ -99,7 +99,7 @@ DISHIC <- function(file_path, feature_path, code_path, chr, cores, bin_size, lim
     dir.create(paste0(file_path, "/result/chr", chr), recursive = TRUE)
 
 
-    if (GP) {
+    if (gp) {
         extract_bin_coords <- function(rownames_list) {
             coords_list <- lapply(rownames_list, function(rowname) {
                 parts <- strsplit(rowname, "-")[[1]]
