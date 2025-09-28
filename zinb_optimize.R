@@ -53,7 +53,7 @@ zinbOptimize <- function(model, file, maxiter = 15, stop.epsilon = 0.0001,K_inv 
         gc()
         ########## alpha ############
         print("alpha")
-        if(K_inv){
+        if(!is.null(K_inv)){
             estimate_alpha <- matrix(unlist(
              bplapply(seq_len(n), function(i) {
                 optimright_fun_GP(
