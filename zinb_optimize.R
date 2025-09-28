@@ -63,7 +63,7 @@ zinbOptimize <- function(model, file, maxiter = 15, stop.epsilon = 0.0001,K_inv 
                     K_inv = K_inv_global, 
                     lambda_gp = lambda_gp
                 )
-            }, BPPARAM = BPPARAM)
+            }, BPPARAM = BPPARAM)), nrow = NROW(alpha_mu) + NROW(alpha_pi))
 
         }else{
             estimate_alpha <- matrix(unlist(bplapply(seq(n), function(i) {
