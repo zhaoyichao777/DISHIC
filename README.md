@@ -30,8 +30,10 @@ bin_size <- 200000
 limit_size <- 10000000
  #if the file is too large, group the files into several groups with group_size bin-pairs and calculate them sequentially.
 group_size <- 25000
+ #whether to use gaussian process or not
+gp <- False
 
-DISHIC(file_path, feature_path, code_path, chr, cores, bin_size, limit_size, group_size)
+DISHIC(file_path, feature_path, code_path, chr, cores, bin_size, limit_size, group_size, gp)
 ```
 This is the detail information.
 
