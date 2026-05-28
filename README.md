@@ -47,6 +47,7 @@ file_name1 <- "chr19-fold"
 file_name2 <- "chr19-ori"
 ```
 The data folder `file_path` should contain two subfolders `file_name1` and `file_name2` representing the two control groups for analysis of variance, such as **chr19-fold** and **chr19-ori** here.
+Note that the bin id should start from **1** to match scHiCNorm feature files.
 
 #### File Structure
 In each folder, the scHi-C data files for all samples are included. Each sample is stored in a separate file, and each file has three columns:
